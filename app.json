@@ -6,7 +6,7 @@
   "keywords": ["node", "express", "github", "wit", "bot", "fcaebook"],
   "env": {
     "WIT_TOKEN": {
-      "description": "UE3RJRDNMNWBK53U4ZGRIM7OK7YUPEIL",
+      "description": "PZTR5OYNJ7L2PY4N56LLMJ2HZY5BRNKS",
       "required": true
     },
     "FB_PAGE_TOKEN": {
@@ -15,7 +15,7 @@
     },
     "FB_VERIFY_TOKEN": {
       "description": "just_do_it",
-      "required": false
+      "required": true
     }
   }
 }
