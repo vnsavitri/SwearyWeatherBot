@@ -1,181 +1,177 @@
-# messenger-bot
-[![Build Status](https://travis-ci.org/remixz/messenger-bot.svg?branch=master)](https://travis-ci.org/remixz/messenger-bot)
-[![Coverage Status](https://coveralls.io/repos/github/remixz/messenger-bot/badge.svg?branch=master)](https://coveralls.io/github/remixz/messenger-bot?branch=master)
-[![npm version](https://img.shields.io/npm/v/messenger-bot.svg)](https://www.npmjs.com/package/messenger-bot)
-[![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg)](http://standardjs.com/)
+# Wit-Facebook
+[![Build Status](https://travis-ci.org/hunkim/Wit-Facebook.svg?branch=master)](https://travis-ci.org/hunkim/Wit-Facebook)
+[![Codacy Badge](https://api.codacy.com/project/badge/grade/7442b6c4eb6b48a890d751c0da5a3b6d)](https://www.codacy.com/app/hunkim/Wit-Facebook)
 
-
-A Node client for the [Facebook Messenger Platform](https://developers.facebook.com/docs/messenger-platform).
-
-Requires Node >=4.0.0.
-
-## Installation
+Wit.ai and Facebook Messenger Integration Example
+## Initial Installation
+Fork this repository and clone.
 
 ```bash
-npm install messenger-bot
+git clone https://github.com/{forked}/Wit-Facebook.git
+cd Wit-Facebook
+npm install
+ ```
+
+## Configuration
+### Wit Setting
+
+Go to https://wit.ai/home and create a wit app for you. Read https://wit.ai/docs/quickstart and see a demo at: https://wit.ai/sungkim/weather/stories.
+Then, go to the setting in your wit app and get the token id.
+
+![image](https://cloud.githubusercontent.com/assets/901975/14757067/58f03050-0922-11e6-813d-831df8614303.png)
+
+Test the bot.js with your WIT_TOKEN, and make sure the bot is working.
+```bash
+ $WIT_TOKEN=insert_token_here node bot
+ ```
+
+ You can type your text, and see bot's response.
+
+```bash
+ Bot testing mode.
+> What is the weather?                        # your msg
+Executing merge action
+Executing say with message: Where exactly?
+Where exactly?                                # bot
+> In Seoul?                                   # your msg
+Executing merge action
+Executing action: fetch-weather
+Executing say with message: I see it’s sunny in Seoul today!
+I see it’s sunny in Seoul today!              # bot
+>
 ```
 
-## Example
+### Facebook Page Creation
+First you need to make a Facebook Page at https://www.facebook.com/pages/create/?ref_type=pages_browser, since the messenger bot will be connected to your facebook page.
 
-See more examples in [the examples folder.](https://github.com/remixz/messenger-bot/tree/master/example)
+### Facebook App Creation
 
-Run this example in the cloud: [![Nitrous Quickstart](https://nitrous-image-icons.s3.amazonaws.com/quickstart.svg)](https://www.nitrous.io/quickstart)
-* Setup `PAGE_TOKEN`, `VERIFY_TOKEN`, `APP_SECRET` and start the example by `Run > Start Messenger Echo Bot`.
-* Your Webhook URL is available at `Preview > 3000` in the IDE.
+* Add a new app at https://developers.facebook.com/quickstarts/?platform=web. Name it and click  "Create New Facebook App ID":
 
-```js
-const http = require('http')
-const Bot = require('messenger-bot')
+![image](https://cloud.githubusercontent.com/assets/901975/14749905/b557bf80-08f4-11e6-8218-2dd8dc7d529c.png)
 
-let bot = new Bot({
-  token: 'PAGE_TOKEN',
-  verify: 'VERIFY_TOKEN',
-  app_secret: 'APP_SECRET'
-})
+* Add email, select category, an add web site. (Any URL is OK):
 
-bot.on('error', (err) => {
-  console.log(err.message)
-})
+![image](https://cloud.githubusercontent.com/assets/901975/14749960/ef969b94-08f4-11e6-9fa6-3294a47fcf4e.png)
 
-bot.on('message', (payload, reply) => {
-  let text = payload.message.text
+### Facebook Messenger Setting
 
-  bot.getProfile(payload.sender.id, (err, profile) => {
-    if (err) throw err
+* From https://developers.facebook.com/apps/, select the created app:
 
-    reply({ text }, (err) => {
-      if (err) throw err
+![image](https://cloud.githubusercontent.com/assets/901975/14757262/32399512-0924-11e6-924f-6b52d6303ecf.png)
 
-      console.log(`Echoed back to ${profile.first_name} ${profile.last_name}: ${text}`)
-    })
-  })
-})
+* Select Messenger and get started:
 
-http.createServer(bot.middleware()).listen(3000)
-console.log('Echo bot server running at port 3000.')
+![image](https://cloud.githubusercontent.com/assets/901975/14750051/6733be3e-08f5-11e6-9da7-a35eb2720298.png)
+
+* Select the page you have created and get the Page Access Token:
+
+![image](https://cloud.githubusercontent.com/assets/901975/14757285/78e65248-0924-11e6-9ffb-e6226a7d434f.png)
+
+### Launch Server in Heroku
+
+* Run heroku create and push to heroku:
+
+```bash
+cd Wit-Facebook
+heroku create
+git push heroku master
 ```
 
-## Usage
+* Alternatively, click the button below:
 
-### Functions
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
-#### `let bot = new Bot(opts)`
+* You need to set WIT_TOKEN and FB_PAGE_TOKEN. You can set your FB_VERIFY_TOKEN which is a token used to verify the server. The default value is "just_do_it". Set the WIT_TOKEN, FB_PAGE_TOKEN, and FB_VERIFY_TOKEN config variables.
 
-Returns a new Bot instance.
+![image](https://cloud.githubusercontent.com/assets/901975/14750245/627a5d20-08f6-11e6-9672-f19b3719eb2b.png)
 
-`opts` - Object
+* Make sure "Deploy to Heroku" is green and click the "View" button:
 
-* `token` - String: Your Page Access Token, found in your App settings. Required.
-* `verify` - String: A verification token for the first-time setup of your webhook. Optional, but will be required by Facebook when you first set up your webhook.
-* `app_secret` - String: Your App Secret token used for message integrity check. If specified, every POST request  will be tested for spoofing. Optional.
+![image](https://cloud.githubusercontent.com/assets/901975/14750332/d59fad46-08f6-11e6-9f24-16fff6b98898.png)
 
-#### `bot.middleware()`
+* If it is set correctly, you will see something like this from https://{yourspecificedname}.herokuapp.com/:
+"Only those who will risk going too far can possibly find out how far one can go." - T.S. Eliot"
 
-The main middleware for your bot's webhook. Returns a function. Usage:
+### Facebook Webhooks Setting
 
-```js
-const http = require('http')
-const Bot = require('messenger-bot')
+* The final step is to put this server URL in the Facebook app setting. From https://developers.facebook.com/apps/, select your app and messenger. You will see Webhooks:
 
-let bot = new Bot({
-  token: 'PAGE_TOKEN',
-  verify: 'VERIFY_TOKEN'
-})
+![image](https://cloud.githubusercontent.com/assets/901975/14750370/0d98de98-08f7-11e6-8c6b-85733dab4fb4.png)
 
-http.createServer(bot.middleware()).listen(3000)
+* Select "Setup Webhooks", and you will see callback URL and verify token. For the callback URL put your Hherokuapp URL + "/webhook". For example, my callback URL is https://fbwitbot.herokuapp.com/webhook.
+
+* Type the Verify Token that you set in the Heruku app setting. If you haven't set, the default value is "just_do_it".
+
+* Click all items in the Subscription Fields.
+
+![image](https://cloud.githubusercontent.com/assets/901975/14750713/c64e4ee0-08f8-11e6-8745-2ebc746ae367.png)
+
+* Then, you will see the green complete!
+
+![image](https://cloud.githubusercontent.com/assets/901975/14750734/e59c1016-08f8-11e6-9333-fbb7c92dd342.png)
+
+* You may need to select the Facebook Page one more time and get the access token.
+
+![image](https://cloud.githubusercontent.com/assets/901975/14757285/78e65248-0924-11e6-9ffb-e6226a7d434f.png)
+
+* You need to fire this command to activate your messanger.
+
+```bash
+curl -X POST "https://graph.facebook.com/v2.6/me/subscribed_apps?access_token=<PAGE_ACCESS_TOKEN>"
+```
+* You may see:
+```bash
+{"success":true}
 ```
 
-As well, it mounts `/_status`, which will return `{"status": "ok"}` if the middleware is running. If `verify` is specified in the bot options, it will mount a handler for `GET` requests that verifies the webhook.
+* Finally, go to the Facebook page you created/selected, and talk to your bot. Enjoy!
 
-#### `bot.sendMessage(recipient, payload, callback)`
+![image](https://cloud.githubusercontent.com/assets/901975/14750786/20ddf0a4-08f9-11e6-9c9c-719d1020e5d8.png)
 
-Sends a message with the `payload` to the target `recipient`, and calls the callback. See [Send API](https://developers.facebook.com/docs/messenger-platform/send-api-reference#request).
+![image](https://cloud.githubusercontent.com/assets/901975/14751164/2a485e2a-08fb-11e6-9a98-fd79bb0773f7.png)
 
-* `recipient` - Number: The Facebook ID of the intended recipient.
-* `payload` - Object: The message payload. Should follow the [Send API format](https://developers.facebook.com/docs/messenger-platform/send-api-reference).
-* `callback` - Function: Called with `(err, info)` once the request has completed. `err` contains an error, if any, and `info` contains the response from Facebook, usually with the new message's ID.
+## Testing
 
-#### `bot.getProfile(target, callback)`
+### Jest
+ ```bash
+ npm test
+ ```
 
-Returns profile information of the `target`, called in the `callback`. See [User Profile API](https://developers.facebook.com/docs/messenger-platform/send-api-reference#user_profile_request).
+### Bot testing
+ ```bash
+ $WIT_TOKEN=insert_token_here node bot
+ ```
 
-* `target` - Number: The Facebook ID of the intended target.
-* `callback` - Function: Called with `(err, profile)` once the request has completed. `err` contains an error, if any, and `info` contains the response from Facebook, in this format:
-
-```json
-{
-  "first_name": "Zach",
-  "last_name": "Bruggeman",
-  "profile_pic": "<url to profile picture>",
-  "locale": "en",
-  "timezone": "PST",
-  "gender": "M"
-}
+### Server testing
+First, run the server
+```bash
+ $WIT_TOKEN=insert_token_here node index
+ ```
+ In other shell, fire this command:
+ ```bash
+ $curl -X POST -H "Content-Type: application/json" -d @__tests__/msg.json http://localhost:8445/webhook
 ```
 
-#### `bot._handleMessage(payload)`
+You will see something like this:
+```
+I'm wating for you @8445
 
-The underlying method used by `bot.middleware()` to parse the message payload, and fire the appropriate events. Use this if you've already implemented your own middleware or route handlers to receive the webhook request, and just want to fire the events on the bot instance. See [the echo bot implemented in Express](https://github.com/remixz/messenger-bot/blob/master/example/echo-express.js) for an example.
-
-* `payload` - Object: The payload sent by Facebook to the webhook.
-
-#### `bot._verify(req, res)`
-
-The underlying method used by `bot.middleware()` for the initial webhook verification. Use this if you've already implemented your own middleware or route handlers, and wish to handle the request without implementing `bot.middleware()`. See [the echo bot implemented in Express](https://github.com/remixz/messenger-bot/blob/master/example/echo-express.js) for an example.
-
-* `req` - Request: The `http` request object.
-* `res` - Response: The `http` response object.
-
-### Events
-
-#### bot.on('message', (payload, reply))
-
-Triggered when a message is sent to the bot.
-
-* `payload` - Object: An object containing the message event's payload from Facebook. See [Facebook's documentation](https://developers.facebook.com/docs/messenger-platform/webhook-reference#received_message) for the format.
-* `reply` - Function: A convenience function that calls `bot.sendMessage`, with the recipient automatically set to the message sender's Facebook ID. Example usage:
-
-```js
-bot.on('message', (payload, reply) => {
-  reply({ text: 'hey!'}, (err, info) => {})
-})
+Executing merge action
+Executing action: fetch-weather
+Executing say with message: I see it’s sunny in Hong Kong today!
+I see it’s sunny in Hong Kong today!
+Oops! An error occurred while forwarding the response to USER_ID : An active access token must be used to query information about the current user.
+Waiting for futher messages.
 ```
 
-#### bot.on('postback', (payload, reply))
+The USER_ID error is OK, but make sure the bot says, "I see it’s sunny in Hong Kong today!".
 
-Triggered when a postback is triggered by the sender in Messenger.
+## Credit
+I reused soruce code and configuration from:
+* https://github.com/wit-ai/node-wit
+* https://github.com/jw84/messenger-bot-tutorial
+* https://developers.facebook.com/docs/messenger-platform/quickstart
 
-* `payload` - Object: An object containing the postback event's payload from Facebook. See [Facebook's documentation](https://developers.facebook.com/docs/messenger-platform/webhook-reference#postback) for the format.
-* `reply` - Function: A convenience function that calls `bot.sendMessage`, with the recipient automatically set to the message sender's Facebook ID. Example usage:
-
-```js
-bot.on('postback', (payload, reply) => {
-  reply({ text: 'hey!'}, (err, info) => {})
-})
-```
-
-#### bot.on('delivery', (payload, reply))
-
-Triggered when a message has been successfully delivered.
-
-* `payload` - Object: An object containing the delivery event's payload from Facebook. See [Facebook's documentation](https://developers.facebook.com/docs/messenger-platform/webhook-reference#message_delivery) for the format.
-* `reply` - Function: A convenience function that calls `bot.sendMessage`, with the recipient automatically set to the message sender's Facebook ID. Example usage:
-
-```js
-bot.on('delivery', (payload, reply) => {
-  reply({ text: 'hey!'}, (err, info) => {})
-})
-```
-
-#### bot.on('authentication', (payload, reply))
-
-Triggered when a user authenticates with the "Send to Messenger" plugin.
-
-* `payload` - Object: An object containing the authentication event's payload from Facebook. See [Facebook's documentation](https://developers.facebook.com/docs/messenger-platform/webhook-reference#auth) for the format.
-* `reply` - Function: A convenience function that calls `bot.sendMessage`, with the recipient automatically set to the message sender's Facebook ID. Example usage:
-
-```js
-bot.on('delivery', (payload, reply) => {
-  reply({ text: 'hey!'}, (err, info) => {})
-})
-```
+## Contribution
+We welcome your comments and PRs!

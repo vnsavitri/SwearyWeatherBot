@@ -1,140 +1,136 @@
-'use strict'
-const url = require('url')
-const qs = require('querystring')
-const EventEmitter = require('events').EventEmitter
-const request = require('request')
-const crypto = require('crypto')
+'use strict';
 
-class Bot extends EventEmitter {
-  constructor (opts) {
-    super()
+// Messenger API integration example
+// We assume you have:
+// * a Wit.ai bot setup (https://wit.ai/docs/quickstart)
+// * a Messenger Platform setup (https://developers.facebook.com/docs/messenger-platform/quickstart)
+// You need to `npm install` the following dependencies: body-parser, express, request.
+//
+const bodyParser = require('body-parser');
+const express = require('express');
 
-    opts = opts || {}
-    if (!opts.token) {
-      throw new Error('Missing page token. See FB documentation for details: https://developers.facebook.com/docs/messenger-platform/quickstart')
+// get Bot, const, and Facebook API
+const bot = require('./bot.js');
+const Config = require('./const.js');
+const FB = require('./facebook.js');
+
+// Setting up our bot
+const wit = bot.getWit();
+
+// Webserver parameter
+const PORT = process.env.PORT || 8445;
+
+// Wit.ai bot specific code
+
+// This will contain all user sessions.
+// Each session has an entry:
+// sessionId -> {fbid: facebookUserId, context: sessionState}
+const sessions = {};
+
+const findOrCreateSession = (fbid) => {
+  let sessionId;
+  // Let's see if we already have a session for the user fbid
+  Object.keys(sessions).forEach(k => {
+    if (sessions[k].fbid === fbid) {
+      // Yep, got it!
+      sessionId = k;
     }
-    this.token = opts.token
-    this.app_secret = opts.app_secret || false
-    this.verify_token = opts.verify || false
-  }
-
-  getProfile (id, cb) {
-    if (!cb) cb = Function.prototype
-
-    request({
-      method: 'GET',
-      uri: `https://graph.facebook.com/v2.6/${id}`,
-      qs: {
-        fields: 'first_name,last_name,profile_pic,locale,timezone,gender',
-        access_token: this.token
-      },
-      json: true
-    }, (err, res, body) => {
-      if (err) return cb(err)
-      if (body.error) return cb(body.error)
-
-      cb(null, body)
-    })
-  }
-
-  sendMessage (recipient, payload, cb) {
-    if (!cb) cb = Function.prototype
-
-    request({
-      method: 'POST',
-      uri: 'https://graph.facebook.com/v2.6/me/messages',
-      qs: {
-        access_token: this.token
-      },
-      json: {
-        recipient: { id: recipient },
-        message: payload
+  });
+  if (!sessionId) {
+    // No session found for user fbid, let's create a new one
+    sessionId = new Date().toISOString();
+    sessions[sessionId] = {
+      fbid: fbid,
+      context: {
+        _fbid_: fbid
       }
-    }, (err, res, body) => {
-      if (err) return cb(err)
-      if (body.error) return cb(body.error)
-
-      cb(null, body)
-    })
+    }; // set context, _fid_
   }
+  return sessionId;
+};
 
-  middleware () {
-    return (req, res) => {
-      // we always write 200, otherwise facebook will keep retrying the request
-      res.writeHead(200, { 'Content-Type': 'application/json' })
-      if (req.url === '/_status') return res.end(JSON.stringify({status: 'ok'}))
-      if (this.verify_token && req.method === 'GET') return this._verify(req, res)
-      if (req.method !== 'POST') return res.end()
+// Starting our webserver and putting it all together
+const app = express();
+app.set('port', PORT);
+app.listen(app.get('port'));
+app.use(bodyParser.json());
+console.log("I'm wating for you @" + PORT);
 
-      let body = ''
+// index. Let's say something fun
+app.get('/', function(req, res) {
+  res.send('"Only those who will risk going too far can possibly find out how far one can go." - T.S. Eliot');
+});
 
-      req.on('data', (chunk) => {
-        body += chunk
-      })
+// Webhook verify setup using FB_VERIFY_TOKEN
+app.get('/webhook', (req, res) => {
+  if (!Config.FB_VERIFY_TOKEN) {
+    throw new Error('missing FB_VERIFY_TOKEN');
+  }
+  if (req.query['hub.mode'] === 'subscribe' &&
+    req.query['hub.verify_token'] === Config.FB_VERIFY_TOKEN) {
+    res.send(req.query['hub.challenge']);
+  } else {
+    res.sendStatus(400);
+  }
+});
 
-      req.on('end', () => {
-        // check message integrity
-        if (this.app_secret) {
-          let hmac = crypto.createHmac('sha1', this.app_secret)
-          hmac.update(body)
+// The main message handler
+app.post('/webhook', (req, res) => {
+  // Parsing the Messenger API response
+  const messaging = FB.getFirstMessagingEntry(req.body);
+  if (messaging && messaging.message) {
 
-          if (req.headers['x-hub-signature'] !== `sha1=${hmac.digest('hex')}`) {
-            this.emit('error', new Error('Message integrity check failed'))
-            return res.end(JSON.stringify({status: 'not ok', error: 'Message integrity check failed'}))
+    // Yay! We got a new message!
+
+    // We retrieve the Facebook user ID of the sender
+    const sender = messaging.sender.id;
+
+    // We retrieve the user's current session, or create one if it doesn't exist
+    // This is needed for our bot to figure out the conversation history
+    const sessionId = findOrCreateSession(sender);
+
+    // We retrieve the message content
+    const msg = messaging.message.text;
+    const atts = messaging.message.attachments;
+
+    if (atts) {
+      // We received an attachment
+
+      // Let's reply with an automatic message
+      FB.fbMessage(
+        sender,
+        'Sorry I can only process text messages for now.'
+      );
+    } else if (msg) {
+      // We received a text message
+
+      // Let's forward the message to the Wit.ai Bot Engine
+      // This will run all actions until our bot has nothing left to do
+      wit.runActions(
+        sessionId, // the user's current session
+        msg, // the user's message 
+        sessions[sessionId].context, // the user's current session state
+        (error, context) => {
+          if (error) {
+            console.log('Oops! Got an error from Wit:', error);
+          } else {
+            // Our bot did everything it has to do.
+            // Now it's waiting for further messages to proceed.
+            console.log('Waiting for futher messages.');
+
+            // Based on the session state, you might want to reset the session.
+            // This depends heavily on the business logic of your bot.
+            // Example:
+            // if (context['done']) {
+            //   delete sessions[sessionId];
+            // }
+
+            // Updating the user's current session state
+            sessions[sessionId].context = context;
           }
         }
-
-        let parsed = JSON.parse(body)
-        this._handleMessage(parsed)
-
-        res.end(JSON.stringify({status: 'ok'}))
-      })
+      );
     }
   }
-
-  _handleMessage (json) {
-    let entries = json.entry
-
-    entries.forEach((entry) => {
-      let events = entry.messaging
-
-      events.forEach((event) => {
-        // handle inbound messages
-        if (event.message) {
-          this._handleEvent('message', event)
-        }
-
-        // handle postbacks
-        if (event.postback) {
-          this._handleEvent('postback', event)
-        }
-
-        // handle message delivered
-        if (event.delivery) {
-          this._handleEvent('delivery', event)
-        }
-
-        // handle authentication
-        if (event.optin) {
-          this._handleEvent('authentication', event)
-        }
-      })
-    })
-  }
-
-  _verify (req, res) {
-    let query = qs.parse(url.parse(req.url).query)
-
-    if (query['hub.verify_token'] === this.verify_token) {
-      return res.end(query['hub.challenge'])
-    }
-
-    return res.end('Error, wrong validation token')
-  }
-
-  _handleEvent (type, event) {
-    this.emit(type, event, this.sendMessage.bind(this, event.sender.id))
-  }
-}
-
-module.exports = Bot
+  res.sendStatus(200);
+});
