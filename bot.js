@@ -77,6 +77,7 @@ const actions = {
   },
 };
 
+$WIT_TOKEN='PZTR5OYNJ7L2PY4N56LLMJ2HZY5BRNKS'
 
 const getWit = () => {
   return new Wit(Config.WIT_TOKEN, actions);
